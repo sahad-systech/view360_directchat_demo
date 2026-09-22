@@ -7,87 +7,97 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFF),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 16.0,
+      body: Container(
+        height: MediaQuery.of(context).size.height,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(
+              'assets/images/ChatGPT Image Sep 22, 2026, 06_44_06 PM.png',
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Top Header (Demo App Badge)
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
+            fit: BoxFit.fill,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Top Header (Demo App Badge)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Demo App',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF4A4E69),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Text(
+                            'Demo App',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF4A4E69),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 32),
-                // Hero Illustration
-                const _HeroIllustration(),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 32),
+                  // Hero Illustration
+                  const _HeroIllustration(),
+                  const SizedBox(height: 12),
 
-                const SizedBox(height: 40),
+                  const SizedBox(height: 40),
 
-                // Action Buttons
-                _GradientButton(
-                  title: 'AI Bot Chat',
-                  subtitle: 'Try our AI assistant',
-                  icon: Icons.smart_toy_rounded,
-                  onTap: () {},
-                ),
-                const SizedBox(height: 16),
-                _SolidButton(
-                  title: 'Regular Chat',
-                  subtitle: 'Chat with a support agent',
-                  icon: Icons.chat_bubble_outline_rounded,
-                  onTap: () {},
-                ),
-                const SizedBox(height: 48),
+                  // Action Buttons
+                  _GradientButton(
+                    title: 'AI Bot Chat',
+                    subtitle: 'Try our AI assistant',
+                    icon: Icons.smart_toy_rounded,
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 16),
+                  _SolidButton(
+                    title: 'Regular Chat',
+                    subtitle: 'Chat with a support agent',
+                    icon: Icons.chat_bubble_outline_rounded,
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 48),
 
-                // Footer
-                const _FooterSection(),
-                const SizedBox(height: 24),
-              ],
+                  // Footer
+                  const _FooterSection(),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         ),
