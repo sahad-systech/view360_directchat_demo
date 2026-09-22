@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:view360_direct_chat_example/features/chat/chat_screen.dart';
 
 class PreChatScreen extends StatelessWidget {
   const PreChatScreen({super.key});
@@ -67,7 +68,12 @@ class PreChatScreen extends StatelessWidget {
                   // Start Conversation Button
                   GestureDetector(
                     onTap: () {
-                      // TODO: Start conversation logic
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChatScreen(),
+                        ),
+                      );
                     },
                     child: Container(
                       width: double.infinity,
