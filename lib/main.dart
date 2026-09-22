@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:view360_direct_chat_example/features/home/home_screen.dart';
+import 'package:view360_direct_chat_example/features/chat/pre_chat_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const HomeScreen(),
+      home: const PreChatScreen(),
     );
   }
 }

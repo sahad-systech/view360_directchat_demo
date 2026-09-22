@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:view360_direct_chat_example/features/chat/pre_chat_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -89,7 +90,14 @@ class HomeScreen extends StatelessWidget {
                     title: 'Regular Chat',
                     subtitle: 'Chat with a support agent',
                     icon: Icons.chat_bubble_outline_rounded,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PreChatScreen(),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 48),
 
