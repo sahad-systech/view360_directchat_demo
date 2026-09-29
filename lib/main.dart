@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-
-import 'features/Aivoice/active_voice_chat_screen.dart';
-import 'features/Aivoice/ai_voice_screen.dart';
-import 'features/Aivoice/call_completed_screen.dart';
+import 'package:view360_direct_chat_example/features/Home/home_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,7 +16,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const CallCompletedScreen(),
+      home: const HomeScreen(),
     );
   }
 }
