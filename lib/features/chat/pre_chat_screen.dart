@@ -1,9 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:view360_direct_chat_example/features/chat/chat_screen.dart';
+import 'package:view360_direct_chat_example/features/chat/presentation/providers/chat_provider.dart';
 
-class PreChatScreen extends StatelessWidget {
+class PreChatScreen extends StatefulWidget {
   const PreChatScreen({super.key});
+
+  @override
+  State<PreChatScreen> createState() => _PreChatScreenState();
+}
+
+class _PreChatScreenState extends State<PreChatScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,35 +60,45 @@ class PreChatScreen extends StatelessWidget {
                   const SizedBox(height: 32),
 
                   // Form Fields
-                  const _InputField(
+                  _InputField(
                     label: 'Full Name',
                     hintText: 'John Doe',
                     icon: Icons.person_outline_rounded,
+                    controller: _nameController,
                   ),
                   const SizedBox(height: 20),
-                  const _InputField(
+                  _InputField(
                     label: 'Email Address',
                     hintText: 'john@example.com',
                     icon: Icons.email_outlined,
+                    controller: _emailController,
                   ),
                   const SizedBox(height: 20),
-                  const _InputField(
+                  _InputField(
                     label: 'Mobile Number',
                     hintText: '+1234567890',
                     icon: Icons.phone_outlined,
+                    controller: _phoneController,
                   ),
                   const SizedBox(height: 20),
-                  const _InputField(
+                  _InputField(
                     label: 'First Message',
                     hintText: 'How can we help you today?',
                     icon: Icons.chat_bubble_outline_rounded,
                     isMultiline: true,
+                    controller: _messageController,
                   ),
                   const SizedBox(height: 32),
 
                   // Start Conversation Button
                   GestureDetector(
                     onTap: () {
+                      final message = _messageController.text;
+                      if (message.isNotEmpty) {
+                        // A mock session id could be generated or fetched here. Using a placeholder for now.
+                        context.read<ChatProvider>().sendMessage(message, 'session_123');
+                      }
+                      
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
@@ -386,12 +417,14 @@ class _InputField extends StatelessWidget {
   final String hintText;
   final IconData icon;
   final bool isMultiline;
+  final TextEditingController? controller;
 
   const _InputField({
     required this.label,
     required this.hintText,
     required this.icon,
     this.isMultiline = false,
+    this.controller,
   });
 
   @override
@@ -422,6 +455,7 @@ class _InputField extends StatelessWidget {
             ],
           ),
           child: TextFormField(
+            controller: controller,
             maxLines: isMultiline ? 4 : 1,
             decoration: InputDecoration(
               hintText: hintText,

@@ -1,8 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class ChatScreen extends StatelessWidget {
+import 'package:provider/provider.dart';
+import 'package:view360_direct_chat_example/features/chat/presentation/providers/chat_provider.dart';
+
+class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch initial chat history
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatProvider>().fetchHistory('session_123');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,25 +30,45 @@ class ChatScreen extends StatelessWidget {
           children: [
             const _ChatHeader(),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                children: const [
-                  _SystemMessage(text: 'Conversation Started'),
-                  SizedBox(height: 24),
-                  _UserMessage(
-                    text: 'hi',
-                    time: '9/22/26, 7:45 PM',
-                    isRead: true,
-                  ),
-                  SizedBox(height: 24),
-                  _SupportMessage(
-                    text:
-                        'You are currently in the queue. There are 1 users ahead of you. A representative will assist you as soon as possible. We appreciate your patience.',
-                    time: '9/22/26, 7:45 PM',
-                  ),
-                  SizedBox(height: 24),
-                  _SystemMessage(text: 'Adhil has joined the chat.'),
-                ],
+              child: Consumer<ChatProvider>(
+                builder: (context, provider, child) {
+                  if (provider.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  if (provider.errorMessage != null) {
+                    return Center(child: Text(provider.errorMessage!));
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                    itemCount: provider.messages.length,
+                    itemBuilder: (context, index) {
+                      final message = provider.messages[index];
+                      // Format the timestamp simply for display, or use a proper formatter
+                      final timeStr = "${message.timestamp.hour}:${message.timestamp.minute.toString().padLeft(2, '0')}";
+
+                      if (message.isMe) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: _UserMessage(
+                            text: message.text,
+                            time: timeStr,
+                            isRead: true, // You could add logic here
+                          ),
+                        );
+                      } else {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: _SupportMessage(
+                            text: message.text,
+                            time: timeStr,
+                          ),
+                        );
+                      }
+                    },
+                  );
+                },
               ),
             ),
             const _ChatInputArea(),
@@ -299,8 +336,29 @@ class _SupportMessage extends StatelessWidget {
   }
 }
 
-class _ChatInputArea extends StatelessWidget {
+class _ChatInputArea extends StatefulWidget {
   const _ChatInputArea();
+
+  @override
+  State<_ChatInputArea> createState() => _ChatInputAreaState();
+}
+
+class _ChatInputAreaState extends State<_ChatInputArea> {
+  final TextEditingController _controller = TextEditingController();
+
+  void _sendMessage() {
+    final text = _controller.text;
+    if (text.isNotEmpty) {
+      context.read<ChatProvider>().sendMessage(text, 'session_123');
+      _controller.clear();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -328,6 +386,8 @@ class _ChatInputArea extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: TextField(
+                controller: _controller,
+                onSubmitted: (_) => _sendMessage(),
                 decoration: InputDecoration(
                   hintText: 'Type your message...',
                   hintStyle: GoogleFonts.inter(
@@ -339,14 +399,17 @@ class _ChatInputArea extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Container(
-              width: 48,
-              height: 48,
-              decoration: const BoxDecoration(
-                color: Color(0xFF4B39C7),
-                shape: BoxShape.circle,
+            GestureDetector(
+              onTap: _sendMessage,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4B39C7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
               ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
             ),
           ],
         ),
