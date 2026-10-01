@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:dio/dio.dart';
+import 'package:view360directchat/view360directchat.dart';
 import 'package:view360_direct_chat_example/features/Home/home_screen.dart';
-import 'package:view360_direct_chat_example/features/chat/data/datasources/chat_remote_data_source.dart';
-import 'package:view360_direct_chat_example/features/chat/data/repositories/chat_repository_impl.dart';
 import 'package:view360_direct_chat_example/features/chat/presentation/providers/chat_provider.dart';
+import 'package:view360_direct_chat_example/core/constants/app_constants.dart';
 
 void main() {
-  final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com')); // Placeholder base URL
-  final chatRemoteDataSource = ChatRemoteDataSource(dio: dio);
-  final chatRepository = ChatRepositoryImpl(remoteDataSource: chatRemoteDataSource);
+  final chatService = ChatService(baseUrl: AppConstants.chatBaseUrl, appId: AppConstants.chatAppId);
+  final socketManager = SocketManager();
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ChatProvider(repository: chatRepository)),
+        ChangeNotifierProvider(create: (_) => ChatProvider(chatService: chatService, socketManager: socketManager)),
       ],
       child: const MyApp(),
     ),

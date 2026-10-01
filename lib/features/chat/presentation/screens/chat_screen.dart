@@ -5,7 +5,7 @@ import '../providers/chat_provider.dart';
 class ChatScreen extends StatefulWidget {
   final String sessionId;
 
-  const ChatScreen({Key? key, required this.sessionId}) : super(key: key);
+  const ChatScreen({super.key, required this.sessionId});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -63,7 +63,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     itemBuilder: (context, index) {
                       final message = provider.messages[index];
                       return Align(
-                        alignment: message.isMe 
+                        alignment: message.senderType == 'user' 
                             ? Alignment.centerRight 
                             : Alignment.centerLeft,
                         child: Container(
@@ -73,12 +73,12 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: message.isMe 
+                            color: message.senderType == 'user' 
                                 ? Colors.blue[100] 
                                 : Colors.grey[200],
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Text(message.text),
+                          child: Text(message.content),
                         ),
                       );
                     },

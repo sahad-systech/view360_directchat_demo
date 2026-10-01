@@ -24,7 +24,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFF), // Light background instead of pattern
+      backgroundColor: const Color(
+        0xFFFAFAFF,
+      ), // Light background instead of pattern
       body: SafeArea(
         child: Column(
           children: [
@@ -35,24 +37,30 @@ class _ChatScreenState extends State<ChatScreen> {
                   if (provider.isLoading) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  
+
                   if (provider.errorMessage != null) {
                     return Center(child: Text(provider.errorMessage!));
                   }
 
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 24,
+                    ),
                     itemCount: provider.messages.length,
                     itemBuilder: (context, index) {
                       final message = provider.messages[index];
                       // Format the timestamp simply for display, or use a proper formatter
-                      final timeStr = "${message.timestamp.hour}:${message.timestamp.minute.toString().padLeft(2, '0')}";
+                      DateTime? dt = DateTime.tryParse(message.createdAt);
+                      final timeStr = dt != null
+                          ? "${dt.hour}:${dt.minute.toString().padLeft(2, '0')}"
+                          : message.createdAt;
 
-                      if (message.isMe) {
+                      if (message.senderType == 'user') {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 24),
                           child: _UserMessage(
-                            text: message.text,
+                            text: message.content,
                             time: timeStr,
                             isRead: true, // You could add logic here
                           ),
@@ -61,7 +69,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 24),
                           child: _SupportMessage(
-                            text: message.text,
+                            text: message.content,
                             time: timeStr,
                           ),
                         );
@@ -104,7 +112,11 @@ class _ChatHeader extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Color(0xFF1B1B2F)),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 20,
+              color: Color(0xFF1B1B2F),
+            ),
           ),
           const SizedBox(width: 16),
           Stack(
@@ -174,9 +186,9 @@ class _ChatHeader extends StatelessWidget {
   }
 }
 
-class _SystemMessage extends StatelessWidget {
+class SystemMessage extends StatelessWidget {
   final String text;
-  const _SystemMessage({required this.text});
+  const SystemMessage({super.key, required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -228,10 +240,7 @@ class _UserMessage extends StatelessWidget {
           ),
           child: Text(
             text,
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 14,
-            ),
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
           ),
         ),
         const SizedBox(height: 6),
@@ -247,8 +256,12 @@ class _UserMessage extends StatelessWidget {
             ),
             if (isRead) ...[
               const SizedBox(width: 4),
-              const Icon(Icons.done_all_rounded, size: 14, color: Color(0xFF4B39C7)),
-            ]
+              const Icon(
+                Icons.done_all_rounded,
+                size: 14,
+                color: Color(0xFF4B39C7),
+              ),
+            ],
           ],
         ),
       ],
@@ -260,10 +273,7 @@ class _SupportMessage extends StatelessWidget {
   final String text;
   final String time;
 
-  const _SupportMessage({
-    required this.text,
-    required this.time,
-  });
+  const _SupportMessage({required this.text, required this.time});
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +304,10 @@ class _SupportMessage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: const BorderRadius.only(
@@ -408,7 +421,11 @@ class _ChatInputAreaState extends State<_ChatInputArea> {
                   color: Color(0xFF4B39C7),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
             ),
           ],

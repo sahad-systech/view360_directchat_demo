@@ -90,21 +90,56 @@ class _PreChatScreenState extends State<PreChatScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Start Conversation Button
                   GestureDetector(
-                    onTap: () {
+                    onTap: () async {
                       final message = _messageController.text;
-                      if (message.isNotEmpty) {
-                        // A mock session id could be generated or fetched here. Using a placeholder for now.
-                        context.read<ChatProvider>().sendMessage(message, 'session_123');
+                      final name = _nameController.text;
+                      final email = _emailController.text;
+                      final phone = _phoneController.text;
+
+                      if (message.isNotEmpty &&
+                          name.isNotEmpty &&
+                          (email.isNotEmpty || phone.isNotEmpty)) {
+                        final success = await context
+                            .read<ChatProvider>()
+                            .createSession(
+                              name: name,
+                              email: email,
+                              phone: phone,
+                              firstMessage: message,
+                            );
+
+                        if (success && mounted) {
+                          await context.read<ChatProvider>().fetchHistory('');
+                          if (mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ChatScreen(),
+                              ),
+                            );
+                          }
+                        } else if (mounted) {
+                          final error = context
+                              .read<ChatProvider>()
+                              .errorMessage;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                error ?? 'Failed to start conversation',
+                              ),
+                            ),
+                          );
+                        }
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Please fill out name, message, and either email or phone.',
+                            ),
+                          ),
+                        );
                       }
-                      
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ChatScreen(),
-                        ),
-                      );
                     },
                     child: Container(
                       width: double.infinity,
