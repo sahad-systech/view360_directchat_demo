@@ -72,13 +72,20 @@ class _ChatScreenState extends State<ChatScreen> {
                           ? "${dt.hour}:${dt.minute.toString().padLeft(2, '0')}"
                           : message.createdAt;
 
-                      if (message.senderType == 'user') {
+                      if (message.senderType == 'customer') {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 24),
                           child: _UserMessage(
                             text: message.content,
                             time: timeStr,
-                            isRead: true, // You could add logic here
+                            isRead: true,
+                          ),
+                        );
+                      } else if (message.senderType == 'system') {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: SystemMessage(
+                            text: message.content,
                           ),
                         );
                       } else {

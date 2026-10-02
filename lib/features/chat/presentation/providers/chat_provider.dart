@@ -147,7 +147,7 @@ class ChatProvider extends ChangeNotifier {
     final optimisticMessage = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch,
       content: text,
-      senderType: 'user',
+      senderType: 'customer',
       createdAt: DateTime.now().toIso8601String(),
       files: [],
     );
