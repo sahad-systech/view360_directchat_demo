@@ -1,5 +1,9 @@
+import 'dart:developer';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:view360directchat/view360directchat.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatProvider extends ChangeNotifier {
   final ChatService chatService;
@@ -12,6 +16,7 @@ class ChatProvider extends ChangeNotifier {
   bool isLoading = false;
   List<ChatMessage> messages = [];
   String? errorMessage;
+  VoidCallback? onChatClosed;
 
   void _initSocket() {
     socketManager.connect(
@@ -24,6 +29,8 @@ class ChatProvider extends ChangeNotifier {
       },
       onAgentClose: () {
         debugPrint('Agent closed');
+        closeChat();
+        onChatClosed?.call();
       },
       onChatTransfer: ({required String name}) {
         debugPrint('Chat transferred to: $name');
@@ -58,7 +65,9 @@ class ChatProvider extends ChangeNotifier {
     try {
       final response = await chatService.fetchMessages();
       messages = response.messages;
+      log(messages.toString());
     } catch (e) {
+      log(e.toString());
       errorMessage = e.toString();
     } finally {
       isLoading = false;
@@ -119,6 +128,8 @@ class ChatProvider extends ChangeNotifier {
         );
       }
 
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('hasActiveChatSession', true);
       return true;
     } catch (e) {
       errorMessage = e.toString();
@@ -156,6 +167,22 @@ class ChatProvider extends ChangeNotifier {
       // Remove optimistic message if failed
       messages.removeWhere((m) => m.id == optimisticMessage.id);
       errorMessage = 'Failed to send message: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> closeChat() async {
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('hasActiveChatSession');
+      chatService.closeChat();
+      messages.clear();
+      socketManager.disconnect();
+    } catch (e) {
+      errorMessage = 'Failed to close chat: $e';
+    } finally {
       notifyListeners();
     }
   }

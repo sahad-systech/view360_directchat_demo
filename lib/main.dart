@@ -4,8 +4,13 @@ import 'package:view360directchat/view360directchat.dart';
 import 'package:view360_direct_chat_example/features/Home/home_screen.dart';
 import 'package:view360_direct_chat_example/features/chat/presentation/providers/chat_provider.dart';
 import 'package:view360_direct_chat_example/core/constants/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:view360_direct_chat_example/features/chat/chat_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final hasActiveChatSession = prefs.getBool('hasActiveChatSession') ?? false;
   final chatService = ChatService(baseUrl: AppConstants.chatBaseUrl, appId: AppConstants.chatAppId);
   final socketManager = SocketManager();
 
@@ -14,13 +19,15 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => ChatProvider(chatService: chatService, socketManager: socketManager)),
       ],
-      child: const MyApp(),
+      child: MyApp(hasActiveChatSession: hasActiveChatSession),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool hasActiveChatSession;
+
+  const MyApp({super.key, required this.hasActiveChatSession});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +37,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const HomeScreen(),
+      home: hasActiveChatSession ? const ChatScreen() : const HomeScreen(),
     );
   }
 }

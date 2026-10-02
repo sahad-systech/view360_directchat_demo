@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:provider/provider.dart';
 import 'package:view360_direct_chat_example/features/chat/presentation/providers/chat_provider.dart';
+import 'package:view360_direct_chat_example/features/Home/home_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -17,7 +18,22 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     // Fetch initial chat history
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChatProvider>().fetchHistory('session_123');
+      final provider = context.read<ChatProvider>();
+      provider.fetchHistory('session_123');
+
+      // Register navigation callback for when agent closes chat
+      provider.onChatClosed = () {
+        if (mounted) {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+        }
+      };
     });
   }
 
@@ -177,7 +193,26 @@ class _ChatHeader extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.exit_to_app_rounded, color: Color(0xFF1B1B2F)),
+          GestureDetector(
+            onTap: () async {
+              final chatProvider = context.read<ChatProvider>();
+              await chatProvider.closeChat();
+              if (context.mounted) {
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                } else {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  );
+                }
+              }
+            },
+            child: const Icon(
+              Icons.exit_to_app_rounded,
+              color: Color(0xFF1B1B2F),
+            ),
+          ),
           const SizedBox(width: 16),
           const Icon(Icons.more_vert_rounded, color: Color(0xFF1B1B2F)),
         ],
