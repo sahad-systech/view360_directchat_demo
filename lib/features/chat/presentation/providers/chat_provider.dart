@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:view360directchat/view360directchat.dart';
@@ -33,9 +31,7 @@ class ChatProvider extends ChangeNotifier {
         debugPrint('Socket connected');
       },
       onAgentJoin: ({dynamic name}) async {
-        log('working agent join block');
-        agentName =
-            (name != null && name.toString().trim().isNotEmpty)
+        agentName = (name != null && name.toString().trim().isNotEmpty)
             ? name.toString().trim()
             : 'Agent';
         debugPrint('Agent joined: $agentName');
@@ -89,8 +85,7 @@ class ChatProvider extends ChangeNotifier {
 
     try {
       final response = await chatService.fetchMessages();
-      messages = response.messages;
-      log(messages.length.toString());
+      messages.addAll(response.messages);
     } catch (e) {
       errorMessage = e.toString();
     } finally {
@@ -109,6 +104,15 @@ class ChatProvider extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
+    if (!socketManager.socket.connected) {
+      _initSocket();
+      int retries = 0;
+      while (!socketManager.socket.connected && retries < 20) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        retries++;
+      }
+    }
+
     try {
       final response = await chatService.createChatSession(
         chatContent: firstMessage,
@@ -116,12 +120,11 @@ class ChatProvider extends ChangeNotifier {
         customerEmail: email,
         fetchFCMToken: false,
       );
-
       if (!response.success && response.isInQueue != true) {
         errorMessage = response.message ?? 'Failed to start chat';
         return false;
       }
-
+      messages.clear();
       String defaultMessage = 'We will get back to you as soon as possible';
       messages = [
         ChatMessage(
@@ -199,9 +202,11 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await chatService.closeChat();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('hasActiveChatSession');
-      chatService.closeChat();
+      await prefs.remove('agentName');
+      agentName = 'Agent';
       messages.clear();
       socketManager.disconnect();
     } catch (e) {

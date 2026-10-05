@@ -96,103 +96,124 @@ class _PreChatScreenState extends State<PreChatScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  GestureDetector(
-                    onTap: () async {
-                      final message = _messageController.text;
-                      final name = _nameController.text;
-                      final email = _emailController.text;
-                      final phone = _phoneController.text;
+                  Consumer<ChatProvider>(
+                    builder: (context, provider, child) {
+                      return GestureDetector(
+                        onTap: provider.isLoading
+                            ? null
+                            : () async {
+                                final message = _messageController.text;
+                                final name = _nameController.text;
+                                final email = _emailController.text;
+                                final phone = _phoneController.text;
 
-                      if (message.isNotEmpty &&
-                          name.isNotEmpty &&
-                          (email.isNotEmpty || phone.isNotEmpty)) {
-                        final success = await context
-                            .read<ChatProvider>()
-                            .createSession(
-                              name: name,
-                              email: email,
-                              phone: phone,
-                              firstMessage: message,
-                            );
+                                if (message.isNotEmpty &&
+                                    name.isNotEmpty &&
+                                    (email.isNotEmpty || phone.isNotEmpty)) {
+                                  final success = await context
+                                      .read<ChatProvider>()
+                                      .createSession(
+                                        name: name,
+                                        email: email,
+                                        phone: phone,
+                                        firstMessage: message,
+                                      );
 
-                        if (success && mounted) {
-                          await context.read<ChatProvider>().fetchHistory('');
-                          if (mounted) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const ChatScreen(),
-                              ),
-                            );
-                          }
-                        } else if (mounted) {
-                          final error = context
-                              .read<ChatProvider>()
-                              .errorMessage;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                error ?? 'Failed to start conversation',
-                              ),
+                                  if (success && mounted) {
+                                    await context
+                                        .read<ChatProvider>()
+                                        .fetchHistory('');
+                                    if (mounted) {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const ChatScreen(),
+                                        ),
+                                      );
+                                    }
+                                  } else if (mounted) {
+                                    final error = context
+                                        .read<ChatProvider>()
+                                        .errorMessage;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          error ??
+                                              'Failed to start conversation',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please fill out name, message, and either email or phone.',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF6A5AE0), Color(0xFF4B39C7)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
                             ),
-                          );
-                        }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Please fill out name, message, and either email or phone.',
-                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF6A5AE0,
+                                ).withValues(alpha: 0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                        );
-                      }
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6A5AE0), Color(0xFF4B39C7)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
+                          child: provider.isLoading
+                              ? const Center(
+                                  child: SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.send_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Start Conversation',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Icon(
+                                      Icons.arrow_forward_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ],
+                                ),
                         ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF6A5AE0,
-                            ).withValues(alpha: 0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.send_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Start Conversation',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Icon(
-                            Icons.arrow_forward_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
 
