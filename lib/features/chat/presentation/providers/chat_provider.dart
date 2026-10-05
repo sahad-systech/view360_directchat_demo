@@ -11,12 +11,20 @@ class ChatProvider extends ChangeNotifier {
 
   ChatProvider({required this.chatService, required this.socketManager}) {
     _initSocket();
+    _loadAgentName();
   }
 
   bool isLoading = false;
   List<ChatMessage> messages = [];
   String? errorMessage;
   VoidCallback? onChatClosed;
+  String agentName = 'Agent';
+
+  Future<void> _loadAgentName() async {
+    final prefs = await SharedPreferences.getInstance();
+    agentName = prefs.getString('agentName') ?? 'Agent';
+    notifyListeners();
+  }
 
   void _initSocket() {
     socketManager.connect(
@@ -24,21 +32,28 @@ class ChatProvider extends ChangeNotifier {
       onConnected: () {
         debugPrint('Socket connected');
       },
-      onAgentJoin: ({dynamic name}) {
+      onAgentJoin: ({dynamic name}) async {
         log('working agent join block');
-        final String agentName =
+        agentName =
             (name != null && name.toString().trim().isNotEmpty)
             ? name.toString().trim()
             : 'Agent';
         debugPrint('Agent joined: $agentName');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('agentName', agentName);
+        notifyListeners();
       },
       onAgentClose: () {
         debugPrint('Agent closed');
         closeChat();
         onChatClosed?.call();
       },
-      onChatTransfer: ({required String name}) {
+      onChatTransfer: ({required String name}) async {
         debugPrint('Chat transferred to: $name');
+        agentName = name.trim().isNotEmpty ? name.trim() : 'Agent';
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('agentName', agentName);
+        notifyListeners();
       },
       onRemovedByInActivity: ({required dynamic reason}) {
         debugPrint('Removed by inactivity: $reason');

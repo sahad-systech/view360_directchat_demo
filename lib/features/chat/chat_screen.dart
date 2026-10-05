@@ -150,13 +150,19 @@ class _ChatHeader extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: Text(
-                    'A',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Consumer<ChatProvider>(
+                    builder: (context, provider, child) {
+                      return Text(
+                        provider.agentName.isNotEmpty
+                            ? provider.agentName[0].toUpperCase()
+                            : 'A',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      );
+                    }
                   ),
                 ),
               ),
@@ -180,13 +186,17 @@ class _ChatHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Agent Name',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF1B1B2F),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+                Consumer<ChatProvider>(
+                  builder: (context, provider, child) {
+                    return Text(
+                      provider.agentName,
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF1B1B2F),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    );
+                  }
                 ),
                 Text(
                   'Active Support',

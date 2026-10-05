@@ -12,10 +12,16 @@ class PreChatScreen extends StatefulWidget {
 }
 
 class _PreChatScreenState extends State<PreChatScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController(
+    text: 'Test User',
+  );
+  final TextEditingController _emailController = TextEditingController(
+    text: 'test@gmail.com',
+  );
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController(
+    text: 'Halo',
+  );
 
   @override
   void dispose() {
