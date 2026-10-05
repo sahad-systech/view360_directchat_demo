@@ -25,7 +25,12 @@ class ChatProvider extends ChangeNotifier {
         debugPrint('Socket connected');
       },
       onAgentJoin: ({dynamic name}) {
-        debugPrint('Agent joined: $name');
+        log('working agent join block');
+        final String agentName =
+            (name != null && name.toString().trim().isNotEmpty)
+            ? name.toString().trim()
+            : 'Agent';
+        debugPrint('Agent joined: $agentName');
       },
       onAgentClose: () {
         debugPrint('Agent closed');
@@ -34,6 +39,11 @@ class ChatProvider extends ChangeNotifier {
       },
       onChatTransfer: ({required String name}) {
         debugPrint('Chat transferred to: $name');
+      },
+      onRemovedByInActivity: ({required dynamic reason}) {
+        debugPrint('Removed by inactivity: $reason');
+        closeChat();
+        onChatClosed?.call();
       },
       onMessage:
           ({
@@ -65,9 +75,8 @@ class ChatProvider extends ChangeNotifier {
     try {
       final response = await chatService.fetchMessages();
       messages = response.messages;
-      log(messages.toString());
+      log(messages.length.toString());
     } catch (e) {
-      log(e.toString());
       errorMessage = e.toString();
     } finally {
       isLoading = false;

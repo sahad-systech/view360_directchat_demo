@@ -84,9 +84,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       } else if (message.senderType == 'system') {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 24),
-                          child: SystemMessage(
-                            text: message.content,
-                          ),
+                          child: SystemMessage(text: message.content),
                         );
                       } else {
                         return Padding(
@@ -183,7 +181,7 @@ class _ChatHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Adhil',
+                  'Agent Name',
                   style: GoogleFonts.inter(
                     color: const Color(0xFF1B1B2F),
                     fontSize: 16,

@@ -928,10 +928,9 @@ packages:
   view360directchat:
     dependency: "direct main"
     description:
-      name: view360directchat
-      sha256: "672f4474a3c1683206d798ace7d779deaf7d934abd8ad986c4d5c93b6cb30c91"
-      url: "https://pub.dev"
-    source: hosted
+      path: "../../view360directchat"
+      relative: true
+    source: path
     version: "2.0.1"
   vm_service:
     dependency: transitive
