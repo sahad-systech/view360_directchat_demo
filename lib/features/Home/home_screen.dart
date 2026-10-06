@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:view360_direct_chat_example/features/Aivoice/voice_agent.dart';
 import 'package:view360_direct_chat_example/features/chat/pre_chat_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -83,7 +84,14 @@ class HomeScreen extends StatelessWidget {
                     title: 'AI Bot Chat',
                     subtitle: 'Try our AI assistant',
                     icon: Icons.smart_toy_rounded,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VoiceAiUi(),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   _SolidButton(
