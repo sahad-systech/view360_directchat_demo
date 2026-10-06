@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:view360directchat/view360directchat.dart';
@@ -18,6 +20,8 @@ class ChatProvider extends ChangeNotifier {
   VoidCallback? onChatClosed;
   String agentName = 'Agent';
 
+  String? isChatEmpty;
+
   Future<void> _loadAgentName() async {
     final prefs = await SharedPreferences.getInstance();
     agentName = prefs.getString('agentName') ?? 'Agent';
@@ -34,6 +38,7 @@ class ChatProvider extends ChangeNotifier {
         agentName = (name != null && name.toString().trim().isNotEmpty)
             ? name.toString().trim()
             : 'Agent';
+        isChatEmpty = await View360ChatPrefs.getChatId();
         debugPrint('Agent joined: $agentName');
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('agentName', agentName);
@@ -100,6 +105,10 @@ class ChatProvider extends ChangeNotifier {
     required String phone,
     required String firstMessage,
   }) async {
+    log(
+      'createSession called with name: $name, email: $email, phone: $phone',
+      name: 'ChatProvider',
+    );
     isLoading = true;
     errorMessage = null;
     notifyListeners();
@@ -207,6 +216,7 @@ class ChatProvider extends ChangeNotifier {
       await prefs.remove('hasActiveChatSession');
       await prefs.remove('agentName');
       agentName = 'Agent';
+      isChatEmpty = null;
       messages.clear();
       socketManager.disconnect();
     } catch (e) {

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -162,7 +164,7 @@ class _ChatHeader extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       );
-                    }
+                    },
                   ),
                 ),
               ),
@@ -196,7 +198,7 @@ class _ChatHeader extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     );
-                  }
+                  },
                 ),
                 Text(
                   'Active Support',
@@ -462,21 +464,29 @@ class _ChatInputAreaState extends State<_ChatInputArea> {
               ),
             ),
             const SizedBox(width: 12),
-            GestureDetector(
-              onTap: _sendMessage,
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF4B39C7),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.send_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
+            Consumer<ChatProvider>(
+              builder: (context, chatProvider, child) {
+                final isChatEmpty = chatProvider.isChatEmpty == null;
+                log(isChatEmpty.toString(), name: 'isChatEmpty');
+                return GestureDetector(
+                  onTap: isChatEmpty ? null : _sendMessage,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isChatEmpty
+                          ? Colors.grey
+                          : const Color(0xFF4B39C7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),
