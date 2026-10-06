@@ -15,6 +15,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  final ScrollController _scrollController = ScrollController();
+  int _messageCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +43,26 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom([bool animated = true]) {
+    if (_scrollController.hasClients) {
+      if (animated) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(
@@ -60,7 +83,16 @@ class _ChatScreenState extends State<ChatScreen> {
                     return Center(child: Text(provider.errorMessage!));
                   }
 
+                  if (provider.messages.length != _messageCount) {
+                    final isInitial = _messageCount == 0;
+                    _messageCount = provider.messages.length;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scrollToBottom(!isInitial);
+                    });
+                  }
+
                   return ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 24,
