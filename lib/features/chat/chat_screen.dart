@@ -244,16 +244,73 @@ class _ChatHeader extends StatelessWidget {
           ),
           GestureDetector(
             onTap: () async {
-              final chatProvider = context.read<ChatProvider>();
-              await chatProvider.closeChat();
-              if (context.mounted) {
-                if (Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                } else {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HomeScreen()),
+              final shouldClose = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    title: Text(
+                      'Close Chat',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF1B1B2F),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    content: Text(
+                      'Are you sure you want to close this chat?',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF5C6B8D),
+                        fontSize: 14,
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF5C6B8D),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE53935),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'Close',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
                   );
+                },
+              );
+
+              if (shouldClose == true) {
+                if (!context.mounted) return;
+                final chatProvider = context.read<ChatProvider>();
+                await chatProvider.closeChat();
+                if (context.mounted) {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const HomeScreen()),
+                    );
+                  }
                 }
               }
             },
@@ -262,8 +319,6 @@ class _ChatHeader extends StatelessWidget {
               color: Color(0xFF1B1B2F),
             ),
           ),
-          const SizedBox(width: 16),
-          const Icon(Icons.more_vert_rounded, color: Color(0xFF1B1B2F)),
         ],
       ),
     );
