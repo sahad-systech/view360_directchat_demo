@@ -11,13 +11,20 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final hasActiveChatSession = prefs.getBool('hasActiveChatSession') ?? false;
-  final chatService = ChatService(baseUrl: AppConstants.chatBaseUrl, appId: AppConstants.chatAppId);
-  final socketManager = SocketManager();
+  await View360.init(View360Config(
+    baseUrl: AppConstants.chatBaseUrl,
+    appId: AppConstants.chatAppId,
+  ));
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ChatProvider(chatService: chatService, socketManager: socketManager)),
+        ChangeNotifierProvider(
+          create: (_) => ChatProvider(
+            chatService: View360.chat,
+            socketManager: View360.socket,
+          ),
+        ),
       ],
       child: MyApp(hasActiveChatSession: hasActiveChatSession),
     ),
