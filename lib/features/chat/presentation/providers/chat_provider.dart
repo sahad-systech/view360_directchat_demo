@@ -21,10 +21,28 @@ class ChatProvider extends ChangeNotifier {
   String agentName = 'Agent';
 
   String? isChatEmpty;
+  bool _isInQueue = false;
+  bool get isInQueue => _isInQueue || isChatEmpty == null;
+  set isInQueue(bool val) => _isInQueue = val;
+  bool get isActiveChat => !isInQueue;
+
+  List<String> attachments = [];
+
+  void addAttachment(String path) {
+    attachments.add(path);
+    notifyListeners();
+  }
+
+  void clearAttachments() {
+    attachments.clear();
+    notifyListeners();
+  }
 
   Future<void> _loadAgentName() async {
     final prefs = await SharedPreferences.getInstance();
     agentName = prefs.getString('agentName') ?? 'Agent';
+    isChatEmpty = await View360ChatPrefs.getChatId();
+    _isInQueue = isChatEmpty == null;
     notifyListeners();
   }
 
@@ -39,6 +57,7 @@ class ChatProvider extends ChangeNotifier {
             ? name.toString().trim()
             : 'Agent';
         isChatEmpty = await View360ChatPrefs.getChatId();
+        _isInQueue = false;
         debugPrint('Agent joined: $agentName');
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('agentName', agentName);
@@ -91,6 +110,8 @@ class ChatProvider extends ChangeNotifier {
     try {
       final response = await chatService.fetchMessages();
       messages.addAll(response.messages);
+      isChatEmpty = await View360ChatPrefs.getChatId();
+      _isInQueue = isChatEmpty == null;
     } catch (e) {
       errorMessage = e.toString();
     } finally {
@@ -153,6 +174,8 @@ class ChatProvider extends ChangeNotifier {
       ];
 
       if (response.isInQueue == true) {
+        _isInQueue = true;
+        isChatEmpty = null;
         messages.add(
           ChatMessage(
             id: DateTime.now().millisecondsSinceEpoch + 2,
@@ -162,6 +185,9 @@ class ChatProvider extends ChangeNotifier {
             createdAt: DateTime.now().toString(),
           ),
         );
+      } else {
+        _isInQueue = false;
+        isChatEmpty = await View360ChatPrefs.getChatId();
       }
 
       final prefs = await SharedPreferences.getInstance();
@@ -177,7 +203,9 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> sendMessage(String text, String sessionId) async {
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty && attachments.isEmpty) return;
+
+    final currentAttachments = List<String>.from(attachments);
 
     // Optimistic UI update
     final optimisticMessage = ChatMessage(
@@ -185,16 +213,17 @@ class ChatProvider extends ChangeNotifier {
       content: text,
       senderType: 'customer',
       createdAt: DateTime.now().toIso8601String(),
-      files: [],
+      files: currentAttachments,
     );
 
     messages.add(optimisticMessage);
+    attachments.clear();
     notifyListeners();
 
     try {
       final response = await chatService.sendChatMessage(
         chatContent: text,
-        filePath: [],
+        filePath: currentAttachments,
       );
       if (!response.status) {
         throw Exception(response.error ?? 'Unknown error sending message');
@@ -217,6 +246,8 @@ class ChatProvider extends ChangeNotifier {
       await prefs.remove('agentName');
       agentName = 'Agent';
       isChatEmpty = null;
+      _isInQueue = false;
+      attachments.clear();
       messages.clear();
       socketManager.disconnect();
     } catch (e) {

@@ -1,9 +1,17 @@
-import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:provider/provider.dart';
+import 'package:view360_direct_chat_example/core/constants/app_constants.dart';
 import 'package:view360_direct_chat_example/features/chat/presentation/providers/chat_provider.dart';
 import 'package:view360_direct_chat_example/features/Home/home_screen.dart';
 
@@ -111,6 +119,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           padding: const EdgeInsets.only(bottom: 24),
                           child: _UserMessage(
                             text: message.content,
+                            files: message.files,
                             time: timeStr,
                             isRead: true,
                           ),
@@ -125,6 +134,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           padding: const EdgeInsets.only(bottom: 24),
                           child: _SupportMessage(
                             text: message.content,
+                            files: message.files,
                             time: timeStr,
                           ),
                         );
@@ -308,7 +318,9 @@ class _ChatHeader extends StatelessWidget {
                   } else {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const HomeScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
                     );
                   }
                 }
@@ -350,13 +362,201 @@ class SystemMessage extends StatelessWidget {
   }
 }
 
+Future<void> downloadAndOpenFile(String filePath, {String? filepath}) async {
+  try {
+    final targetPath = filepath ?? filePath;
+    if (!targetPath.startsWith('http') && File(targetPath).existsSync()) {
+      await OpenFilex.open(targetPath);
+      return;
+    }
+
+    final dio = Dio();
+    final tempDir = await getTemporaryDirectory();
+    final fileName = targetPath.split('/').last.split('?').first;
+    final savePath = '${tempDir.path}/$fileName';
+
+    final file = File(savePath);
+    if (!file.existsSync()) {
+      await dio.download(targetPath, savePath);
+    }
+    await OpenFilex.open(savePath);
+  } catch (e) {
+    debugPrint('Error downloading/opening file: $e');
+  }
+}
+
+Widget buildFileWidget(String filePath) {
+  return FutureBuilder<String?>(
+    future: SharedPreferences.getInstance().then(
+      (prefs) => prefs.getString('mediaUrl'),
+    ),
+    builder: (context, snapshot) {
+      final mediaUrl = snapshot.data ?? AppConstants.mediaUrl;
+      final extension = filePath.split('.').last.toLowerCase();
+      final isLocal =
+          !filePath.startsWith('http') && File(filePath).existsSync();
+      final String fullPath = isLocal
+          ? filePath
+          : (filePath.startsWith('http')
+                ? filePath
+                : '$mediaUrl${filePath.startsWith('/') ? '' : '/'}$filePath');
+
+      switch (extension) {
+        case 'jpg':
+        case 'jpeg':
+        case 'png':
+        case 'webp':
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: InkWell(
+              onTap: () => downloadAndOpenFile(
+                fullPath,
+                filepath: isLocal ? fullPath : null,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: isLocal
+                    ? Image.file(
+                        File(fullPath),
+                        fit: BoxFit.cover,
+                        height: 160,
+                        width: 220,
+                      )
+                    : Image.network(
+                        fullPath,
+                        fit: BoxFit.cover,
+                        height: 160,
+                        width: 220,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 160,
+                            width: 220,
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 160,
+                          width: 220,
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.broken_image, size: 40),
+                        ),
+                      ),
+              ),
+            ),
+          );
+        case 'pdf':
+          return _buildGenericFileWidget(
+            fullPath,
+            Icons.picture_as_pdf,
+            const Color(0xFF8B0000),
+            'PDF Document',
+            isLocal: isLocal,
+          );
+        case 'mp4':
+        case 'mov':
+        case 'avi':
+          return _buildGenericFileWidget(
+            fullPath,
+            Icons.movie,
+            const Color(0xFF2E8B57),
+            'Video File',
+            isLocal: isLocal,
+          );
+        case 'gif':
+          return _buildGenericFileWidget(
+            fullPath,
+            Icons.gif,
+            const Color(0xFF6A5ACD),
+            'GIF File',
+            isLocal: isLocal,
+          );
+        case 'xlsx':
+        case 'csv':
+        case 'xls':
+          return _buildGenericFileWidget(
+            fullPath,
+            Icons.table_chart,
+            const Color(0xFF4682B4),
+            'Spreadsheet',
+            isLocal: isLocal,
+          );
+        case 'mp3':
+        case 'wav':
+        case 'm4a':
+        case 'aac':
+        case 'ogg':
+          return _buildGenericFileWidget(
+            fullPath,
+            Icons.audiotrack,
+            const Color(0xFF673AB7),
+            'Audio File',
+            isLocal: isLocal,
+          );
+        default:
+          return _buildGenericFileWidget(
+            fullPath,
+            Icons.insert_drive_file,
+            const Color(0xFF555555),
+            filePath.split('/').last,
+            isLocal: isLocal,
+          );
+      }
+    },
+  );
+}
+
+Widget _buildGenericFileWidget(
+  String filePath,
+  IconData icon,
+  Color color,
+  String label, {
+  bool isLocal = false,
+}) {
+  return InkWell(
+    onTap: () =>
+        downloadAndOpenFile(filePath, filepath: isLocal ? filePath : null),
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 20),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _UserMessage extends StatelessWidget {
   final String text;
+  final List<String> files;
   final String time;
   final bool isRead;
 
   const _UserMessage({
     required this.text,
+    this.files = const [],
     required this.time,
     this.isRead = false,
   });
@@ -377,9 +577,18 @@ class _UserMessage extends StatelessWidget {
               bottomRight: Radius.circular(4),
             ),
           ),
-          child: Text(
-            text,
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (files.isNotEmpty)
+                ...files.map((file) => buildFileWidget(file)),
+              if (text.isNotEmpty)
+                Text(
+                  text,
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                ),
+            ],
           ),
         ),
         const SizedBox(height: 6),
@@ -410,9 +619,14 @@ class _UserMessage extends StatelessWidget {
 
 class _SupportMessage extends StatelessWidget {
   final String text;
+  final List<String> files;
   final String time;
 
-  const _SupportMessage({required this.text, required this.time});
+  const _SupportMessage({
+    required this.text,
+    this.files = const [],
+    required this.time,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -463,13 +677,22 @@ class _SupportMessage extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Text(
-                  text,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF1B1B2F),
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (files.isNotEmpty)
+                      ...files.map((file) => buildFileWidget(file)),
+                    if (text.isNotEmpty)
+                      Text(
+                        text,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF1B1B2F),
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 6),
@@ -497,12 +720,65 @@ class _ChatInputArea extends StatefulWidget {
 
 class _ChatInputAreaState extends State<_ChatInputArea> {
   final TextEditingController _controller = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  bool _isPickerActive = false;
 
   void _sendMessage() {
     final text = _controller.text;
-    if (text.isNotEmpty) {
-      context.read<ChatProvider>().sendMessage(text, 'session_123');
+    final chatProvider = context.read<ChatProvider>();
+    if (text.trim().isNotEmpty || chatProvider.attachments.isNotEmpty) {
+      chatProvider.sendMessage(text.trim(), 'session_123');
       _controller.clear();
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    if (_isPickerActive) return;
+    _isPickerActive = true;
+    try {
+      final XFile? image = await _picker.pickImage(source: source);
+      if (image != null && mounted) {
+        context.read<ChatProvider>().addAttachment(image.path);
+      }
+    } finally {
+      _isPickerActive = false;
+    }
+  }
+
+  Future<void> _pickAudio() async {
+    if (_isPickerActive) return;
+    _isPickerActive = true;
+    try {
+      // Delay to allow PopupMenu to dismiss completely on iOS
+      await Future.delayed(const Duration(milliseconds: 300));
+      final files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg'],
+      );
+      if (files.isNotEmpty && files.first.path != null && mounted) {
+        context.read<ChatProvider>().addAttachment(files.first.path!);
+      }
+    } on PlatformException catch (e) {
+      debugPrint('File picker error: $e');
+    } finally {
+      _isPickerActive = false;
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    if (_isPickerActive) return;
+    _isPickerActive = true;
+    try {
+      // Delay to allow PopupMenu to dismiss completely on iOS
+      await Future.delayed(const Duration(milliseconds: 300));
+      final files = await FilePicker.pickFiles(type: FileType.any);
+      if (files.isNotEmpty && files.first.path != null && mounted) {
+        context.read<ChatProvider>().addAttachment(files.first.path!);
+      }
+    } on PlatformException catch (e) {
+      debugPrint('File picker error: $e');
+    } finally {
+      _isPickerActive = false;
     }
   }
 
@@ -514,65 +790,238 @@ class _ChatInputAreaState extends State<_ChatInputArea> {
 
   @override
   Widget build(BuildContext context) {
+    return _buildInputArea();
+  }
+
+  Widget _buildInputArea() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Theme.of(context).scaffoldBackgroundColor, // Match background
       child: SafeArea(
         top: false,
         child: Row(
           children: [
-            const Icon(Icons.attach_file_rounded, color: Color(0xFF5C6B8D)),
+            Consumer<ChatProvider>(
+              builder: (context, state, _) {
+                final isActiveChat = state.isActiveChat;
+                if (!isActiveChat) return const SizedBox.shrink();
+                return PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.add,
+                    color: isDark ? Colors.white : Colors.black,
+                    size: 20,
+                  ),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'camera':
+                        _pickImage(ImageSource.camera);
+                        break;
+                      case 'image':
+                        _pickImage(ImageSource.gallery);
+                        break;
+                      case 'audio':
+                        _pickAudio();
+                        break;
+                      case 'document':
+                        _pickDocument();
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'camera',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.camera_alt,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Camera',
+                            style: GoogleFonts.poppins(
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'image',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.image,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Image',
+                            style: GoogleFonts.poppins(
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'audio',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.audiotrack,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Audio',
+                            style: GoogleFonts.poppins(
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'document',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.description,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Document',
+                            style: GoogleFonts.poppins(
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
             const SizedBox(width: 12),
             Expanded(
-              child: TextField(
-                controller: _controller,
-                onSubmitted: (_) => _sendMessage(),
-                decoration: InputDecoration(
-                  hintText: 'Type your message...',
-                  hintStyle: GoogleFonts.inter(
-                    color: const Color(0xFF8B92A5),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF2D3748) : Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark
+                          ? Colors.black.withValues(alpha: 0.3)
+                          : Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _controller,
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black,
                   ),
-                  border: InputBorder.none,
+                  decoration: InputDecoration(
+                    hintText: "Type a message...",
+                    hintStyle: GoogleFonts.poppins(color: Colors.grey.shade400),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  onSubmitted: (_) => _sendMessage(),
                 ),
               ),
             ),
             const SizedBox(width: 12),
             Consumer<ChatProvider>(
-              builder: (context, chatProvider, child) {
-                final isChatEmpty = chatProvider.isChatEmpty == null;
-                log(isChatEmpty.toString(), name: 'isChatEmpty');
-                return GestureDetector(
-                  onTap: isChatEmpty ? null : _sendMessage,
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: isChatEmpty
-                          ? Colors.grey
-                          : const Color(0xFF4B39C7),
-                      shape: BoxShape.circle,
+              builder: (context, state, _) {
+                final attachments = state.attachments;
+
+                if (attachments.isEmpty) return const SizedBox.shrink();
+
+                return Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4, top: 4),
+                      child: Icon(
+                        Icons.attach_file,
+                        size: 24,
+                        color: isDark ? Colors.white : const Color(0xFF001F3F),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
+                    if (attachments.isNotEmpty) ...[
+                      Positioned(
+                        right: 1,
+                        bottom: 1,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${attachments.length}',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () {
+                            context.read<ChatProvider>().clearAttachments();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white24 : Colors.black26,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 );
+              },
+            ),
+            Consumer<ChatProvider>(
+              builder: (context, state, _) {
+                final isInQueue = state.isInQueue;
+
+                return isInQueue
+                    ? Icon(
+                        Icons.send,
+                        color: isDark ? Colors.white24 : Colors.grey,
+                        size: 20,
+                      )
+                    : IconButton(
+                        icon: Icon(
+                          Icons.send,
+                          color: isDark ? Colors.white : Colors.black,
+                          size: 20,
+                        ),
+                        onPressed: _sendMessage,
+                      );
               },
             ),
           ],
