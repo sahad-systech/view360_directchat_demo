@@ -11,10 +11,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final hasActiveChatSession = prefs.getBool('hasActiveChatSession') ?? false;
-  await View360.init(View360Config(
-    baseUrl: AppConstants.chatBaseUrl,
-    appId: AppConstants.chatAppId,
-  ));
+  await View360.init(
+    View360Config(
+      baseUrl: AppConstants.chatBaseUrl,
+      appId: AppConstants.chatAppId,
+    ),
+  );
 
   runApp(
     MultiProvider(

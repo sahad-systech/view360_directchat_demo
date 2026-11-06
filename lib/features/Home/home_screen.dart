@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:view360_direct_chat_example/features/Aivoice/voice_agent.dart';
+import 'package:view360_direct_chat_example/features/call/presentation/screen/voice_call_demo_screen.dart';
 import 'package:view360_direct_chat_example/features/chat/pre_chat_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -75,9 +76,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 32),
                   // Hero Illustration
                   const _HeroIllustration(),
-                  const SizedBox(height: 12),
-
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 52),
 
                   // Action Buttons
                   _GradientButton(
@@ -103,6 +102,20 @@ class HomeScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const PreChatScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _SolidButton(
+                    title: 'App to app calling',
+                    subtitle: 'Call a user',
+                    icon: Icons.call_rounded,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VoiceCallDemoScreen(),
                         ),
                       );
                     },
