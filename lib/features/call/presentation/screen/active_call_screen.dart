@@ -1,39 +1,80 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:view360_call/view360_call.dart';
 
+/// Screen 2: Active Voice Call
+///
+/// Clean, modern dark voice-only interface demonstrating live call lifecycle,
+/// reactive state synchronization, call timer, and mute/unmute control.
 class ActiveCallScreen extends StatefulWidget {
-  final String serverUrl;
+  final View360Call call;
   final String participantName;
   final String roomName;
-  final int initialSeconds;
 
   const ActiveCallScreen({
     super.key,
-    this.serverUrl = 'ws://127.0.0.1:7880',
-    this.participantName = 'User A',
-    this.roomName = 'test-room',
-    this.initialSeconds = 332, // 05:32 as shown in the screenshot
+    required this.call,
+    required this.participantName,
+    required this.roomName,
   });
 
   @override
   State<ActiveCallScreen> createState() => _ActiveCallScreenState();
 }
 
-class _ActiveCallScreenState extends State<ActiveCallScreen> {
-  late int _durationInSeconds;
+class _ActiveCallScreenState extends State<ActiveCallScreen>
+    with SingleTickerProviderStateMixin {
+  int _durationInSeconds = 0;
   Timer? _callTimer;
-  bool _isMuted = true;
-  bool _isSpeakerOn = true;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
+
+  /// The view360_call SDK currently only implements connect, mute, unmute,
+  /// and disconnect. Audio speaker routing is not yet implemented in the SDK.
+  /// Per requirements: "Speaker button, but only if supported by the SDK".
+  static const bool _isSpeakerSupportedBySdk = false;
 
   @override
   void initState() {
     super.initState();
-    _durationInSeconds = widget.initialSeconds;
-    _startTimer();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.96, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    widget.call.controller.addListener(_onCallStateChanged);
+
+    // If call is already connected (normal flow from Screen 1), start the timer
+    if (widget.call.controller.state.status == View360CallStatus.connected) {
+      _startTimer();
+    }
+  }
+
+  void _onCallStateChanged() {
+    if (!mounted) return;
+    final state = widget.call.controller.state;
+
+    if (state.status == View360CallStatus.connected) {
+      if (_callTimer == null) {
+        _startTimer();
+      }
+    } else if (state.status == View360CallStatus.disconnected ||
+        state.status == View360CallStatus.failed) {
+      _callTimer?.cancel();
+      _callTimer = null;
+    }
+
+    setState(() {});
   }
 
   void _startTimer() {
+    _callTimer?.cancel();
     _callTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
@@ -46,6 +87,9 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   @override
   void dispose() {
     _callTimer?.cancel();
+    _pulseController.dispose();
+    widget.call.controller.removeListener(_onCallStateChanged);
+    widget.call.dispose();
     super.dispose();
   }
 
@@ -55,66 +99,71 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     return '$minutes:$seconds';
   }
 
-  void _toggleMute() {
-    setState(() {
-      _isMuted = !_isMuted;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isMuted ? 'Microphone muted' : 'Microphone unmuted',
-          style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
+  Future<void> _toggleMute() async {
+    final isMuted = widget.call.controller.state.isMuted;
+    try {
+      if (isMuted) {
+        await widget.call.unmute();
+      } else {
+        await widget.call.mute();
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.call.controller.state.isMuted
+                ? 'Microphone muted'
+                : 'Microphone unmuted',
+            style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+          ),
+          duration: const Duration(milliseconds: 900),
+          backgroundColor: const Color(0xFF1E293B),
+          behavior: SnackBarBehavior.floating,
         ),
-        duration: const Duration(milliseconds: 900),
-        backgroundColor: const Color(0xFF1E293B),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to change microphone state: $e',
+            style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    }
   }
 
-  void _toggleSpeaker() {
-    setState(() {
-      _isSpeakerOn = !_isSpeakerOn;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isSpeakerOn ? 'Speaker enabled' : 'Earpiece enabled',
-          style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
-        ),
-        duration: const Duration(milliseconds: 900),
-        backgroundColor: const Color(0xFF1E293B),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _endCall() {
+  Future<void> _endCall() async {
     _callTimer?.cancel();
-    Navigator.of(context).pop();
+    try {
+      await widget.call.disconnect();
+    } catch (_) {}
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final callState = widget.call.controller.state;
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
     final screenHeight = mediaQuery.size.height;
 
-    // Responsive horizontal padding based on screen width
     final double horizontalPadding = screenWidth > 600
-        ? (screenWidth - 480) / 2
-        : (screenWidth * 0.05).clamp(16.0, 24.0);
+        ? (screenWidth - 460) / 2
+        : (screenWidth * 0.06).clamp(18.0, 28.0);
 
-    // Responsive sizing
-    final double mainAvatarSize = (screenHeight * 0.12).clamp(84.0, 108.0);
-    final double mainAvatarFontSize = (mainAvatarSize * 0.38).clamp(28.0, 38.0);
-    final double titleFontSize = (screenWidth * 0.058).clamp(20.0, 24.0);
-    final double timerFontSize = (screenWidth * 0.09).clamp(32.0, 40.0);
-    final double controlButtonSize = (screenWidth * 0.16).clamp(56.0, 68.0);
-    final double controlIconSize = (controlButtonSize * 0.42).clamp(24.0, 28.0);
+    final double avatarSize = (screenHeight * 0.15).clamp(96.0, 124.0);
+    final double avatarFontSize = (avatarSize * 0.38).clamp(36.0, 48.0);
+    final double titleFontSize = (screenWidth * 0.062).clamp(22.0, 26.0);
+    final double timerFontSize = (screenWidth * 0.11).clamp(36.0, 48.0);
+    final double controlButtonSize = (screenWidth * 0.18).clamp(62.0, 74.0);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFF0B0F19), // Deep dark theme background
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -122,223 +171,277 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
               physics: const ClampingScrollPhysics(),
               padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding,
-                vertical: 16.0,
+                vertical: 18.0,
               ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 32,
+                  minHeight: constraints.maxHeight - 36,
                 ),
                 child: IntrinsicHeight(
                   child: Column(
                     children: [
-                      // Top Bar: App Title and Connected Badge
+                      // Top Bar: Back & Connection Status Indicator
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (Navigator.canPop(context)) ...[
-                                InkWell(
-                                  onTap: () => Navigator.pop(context),
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: const Color(0xFFE2E8F0),
-                                      ),
+                          InkWell(
+                            onTap: () => Navigator.of(context).maybePop(),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.all(9),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E293B),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFF334155),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                size: 15,
+                                color: Color(0xFFE2E8F0),
+                              ),
+                            ),
+                          ),
+                          _buildConnectionBadge(callState.status),
+                        ],
+                      ),
+
+                      SizedBox(height: (screenHeight * 0.04).clamp(24.0, 42.0)),
+
+                      // Main Voice Caller Avatar with Audio Pulse Ring
+                      Center(
+                        child: AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            final isConnected =
+                                callState.status == View360CallStatus.connected;
+                            return Transform.scale(
+                              scale: isConnected ? _pulseAnimation.value : 1.0,
+                              child: Container(
+                                width: avatarSize + 28,
+                                height: avatarSize + 28,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: isConnected
+                                        ? [
+                                            const Color(0xFF2563EB)
+                                                .withValues(alpha: 0.25),
+                                            const Color(0xFF2563EB)
+                                                .withValues(alpha: 0.02),
+                                          ]
+                                        : [
+                                            const Color(0xFF334155)
+                                                .withValues(alpha: 0.2),
+                                            Colors.transparent,
+                                          ],
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Container(
+                                  width: avatarSize,
+                                  height: avatarSize,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E293B),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isConnected
+                                          ? const Color(0xFF3B82F6)
+                                          : const Color(0xFF475569),
+                                      width: 2.2,
                                     ),
-                                    child: const Icon(
-                                      Icons.arrow_back_ios_new_rounded,
-                                      size: 15,
-                                      color: Color(0xFF334155),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isConnected
+                                            ? const Color(0xFF3B82F6)
+                                                .withValues(alpha: 0.3)
+                                            : Colors.black.withValues(alpha: 0.4),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    widget.participantName.isNotEmpty
+                                        ? widget.participantName[0].toUpperCase()
+                                        : 'A',
+                                    style: GoogleFonts.inter(
+                                      fontSize: avatarFontSize,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 10),
-                              ],
-                              Text(
-                                'View360Call',
-                                style: GoogleFonts.inter(
-                                  fontSize: (screenWidth * 0.048).clamp(18.0, 21.0),
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF0F172A),
-                                  letterSpacing: -0.3,
-                                ),
                               ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFBBF7D0),
-                              ),
-                            ),
-                            child: Text(
-                              'Connected',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF15803D),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: (screenHeight * 0.035).clamp(20.0, 36.0)),
-
-                      // Main Caller Avatar
-                      Container(
-                        width: mainAvatarSize,
-                        height: mainAvatarSize,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF334155),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF334155).withValues(alpha: 0.15),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          widget.participantName.isNotEmpty
-                              ? widget.participantName[0].toUpperCase()
-                              : 'A',
-                          style: GoogleFonts.inter(
-                            fontSize: mainAvatarFontSize,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                            );
+                          },
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 18),
 
-                      // User Name
+                      // Current Participant Name
                       Text(
                         widget.participantName,
                         style: GoogleFonts.inter(
                           fontSize: titleFontSize,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0F172A),
-                          letterSpacing: -0.3,
+                          color: Colors.white,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Room Name with icon
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF334155)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.meeting_room_outlined,
+                              size: 14,
+                              color: Color(0xFF94A3B8),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Room: ${widget.roomName}',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFFCBD5E1),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(height: (screenHeight * 0.03).clamp(20.0, 32.0)),
+
+                      // Call Duration Timer
+                      Text(
+                        _formatDuration(_durationInSeconds),
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: timerFontSize,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 1.5,
                         ),
                       ),
                       const SizedBox(height: 6),
 
-                      // Connection Status / Room Name
+                      // State Subtext description
                       Text(
-                        'Connected to ${widget.roomName}',
+                        _getStatusDescription(callState.status),
                         style: GoogleFonts.inter(
-                          fontSize: (screenWidth * 0.036).clamp(13.0, 14.5),
+                          fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFF64748B),
+                          color: const Color(0xFF94A3B8),
                         ),
                       ),
-                      SizedBox(height: (screenHeight * 0.025).clamp(16.0, 24.0)),
 
-                      // Call Duration (Live Ticking Timer)
-                      Text(
-                        _formatDuration(_durationInSeconds),
-                        style: GoogleFonts.inter(
-                          fontSize: timerFontSize,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0F172A),
-                          letterSpacing: -0.5,
+                      // Error message container (if connection failed)
+                      if (callState.error != null ||
+                          callState.status == View360CallStatus.failed) ...[
+                        const SizedBox(height: 18),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF450A0A).withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF991B1B)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: Color(0xFFF87171),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  callState.error ?? 'Connection failed.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12.5,
+                                    color: const Color(0xFFFCA5A5),
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-
-                      // Duration Label
-                      Text(
-                        'Call duration',
-                        style: GoogleFonts.inter(
-                          fontSize: (screenWidth * 0.034).clamp(12.0, 13.5),
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF64748B),
-                        ),
-                      ),
-                      SizedBox(height: (screenHeight * 0.035).clamp(24.0, 36.0)),
-
-                      // Participants Card
-                      _buildParticipantsCard(screenWidth),
+                      ],
 
                       const Spacer(),
-                      SizedBox(height: (screenHeight * 0.03).clamp(20.0, 32.0)),
+                      SizedBox(height: (screenHeight * 0.04).clamp(24.0, 40.0)),
 
-                      // Bottom Call Controls (Mute, Speaker, End Call)
+                      // Bottom Call Controls (Mute/Unmute, End Call)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Mute Button
-                          _buildControlButton(
+                          // 1. Mute / Unmute Button
+                          _buildVoiceControlButton(
                             size: controlButtonSize,
-                            iconSize: controlIconSize,
-                            backgroundColor: _isMuted
-                                ? const Color(0xFFE2E8F0)
-                                : const Color(0xFFF1F5F9),
-                            borderColor: const Color(0xFFCBD5E1),
-                            icon: _isMuted
+                            icon: callState.isMuted
                                 ? Icons.mic_off_rounded
                                 : Icons.mic_rounded,
-                            iconColor: const Color(0xFF334155),
+                            iconColor: callState.isMuted
+                                ? const Color(0xFFF87171)
+                                : Colors.white,
+                            backgroundColor: callState.isMuted
+                                ? const Color(0xFF7F1D1D)
+                                : const Color(0xFF1E293B),
+                            borderColor: callState.isMuted
+                                ? const Color(0xFFDC2626)
+                                : const Color(0xFF334155),
+                            label: callState.isMuted ? 'Unmute' : 'Mute',
+                            enabled:
+                                callState.status == View360CallStatus.connected,
                             onTap: _toggleMute,
                           ),
-                          const SizedBox(width: 22),
 
-                          // Speaker Button
-                          _buildControlButton(
-                            size: controlButtonSize,
-                            iconSize: controlIconSize,
-                            backgroundColor: _isSpeakerOn
-                                ? const Color(0xFFE2E8F0)
-                                : const Color(0xFFF1F5F9),
-                            borderColor: const Color(0xFFCBD5E1),
-                            icon: _isSpeakerOn
-                                ? Icons.volume_up_rounded
-                                : Icons.volume_down_rounded,
-                            iconColor: const Color(0xFF334155),
-                            onTap: _toggleSpeaker,
-                          ),
-                          const SizedBox(width: 22),
+                          // 2. Speaker Button (Rendered ONLY if supported by the SDK)
+                          if (_isSpeakerSupportedBySdk) ...[
+                            const SizedBox(width: 28),
+                            _buildVoiceControlButton(
+                              size: controlButtonSize,
+                              icon: Icons.volume_up_rounded,
+                              iconColor: Colors.white,
+                              backgroundColor: const Color(0xFF1E293B),
+                              borderColor: const Color(0xFF334155),
+                              label: 'Speaker',
+                              onTap: () {},
+                            ),
+                          ],
 
-                          // End Call Button
-                          _buildControlButton(
+                          const SizedBox(width: 28),
+
+                          // 3. End Call Button
+                          _buildVoiceControlButton(
                             size: controlButtonSize,
-                            iconSize: controlIconSize,
-                            backgroundColor: const Color(0xFFEF4444),
                             icon: Icons.call_end_rounded,
                             iconColor: Colors.white,
-                            hasShadow: true,
+                            backgroundColor: const Color(0xFFDC2626),
+                            borderColor: const Color(0xFFEF4444),
+                            hasGlow: true,
+                            label: 'End Call',
                             onTap: _endCall,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
-
-                      // Controls Subtext Label
-                      Text(
-                        'Mute · Speaker · End Call',
-                        style: GoogleFonts.inter(
-                          fontSize: (screenWidth * 0.034).clamp(12.0, 13.5),
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF64748B),
-                          letterSpacing: 0.1,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
@@ -350,208 +453,203 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     );
   }
 
-  Widget _buildParticipantsCard(double screenWidth) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Participants',
-                style: GoogleFonts.inter(
-                  fontSize: (screenWidth * 0.042).clamp(15.0, 16.5),
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF0F172A),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: const Color(0xFFBBF7D0),
-                  ),
-                ),
-                child: Text(
-                  '2 online',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF15803D),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+  /// Status badge widget representing all 5 SDK connection states:
+  /// Connecting, Connected, Reconnecting, Disconnected, Connection failed.
+  Widget _buildConnectionBadge(View360CallStatus status) {
+    Color bg;
+    Color border;
+    Color textColor;
+    String label;
+    Widget? leading;
 
-          // Participant 1: User A (You)
-          _buildParticipantTile(
-            initial: widget.participantName.isNotEmpty
-                ? widget.participantName[0].toUpperCase()
-                : 'A',
-            name: widget.participantName,
-            role: 'You',
-            screenWidth: screenWidth,
-          ),
-
-          // Divider
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12.0),
-            child: Divider(
-              color: Color(0xFFF1F5F9),
-              height: 1,
-              thickness: 1,
-            ),
-          ),
-
-          // Participant 2: User B (Remote participant)
-          _buildParticipantTile(
-            initial: 'B',
-            name: 'User B',
-            role: 'Remote participant',
-            screenWidth: screenWidth,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildParticipantTile({
-    required String initial,
-    required String name,
-    required String role,
-    required double screenWidth,
-  }) {
-    return Row(
-      children: [
-        // Small Circle Avatar
-        Container(
-          width: 42,
-          height: 42,
+    switch (status) {
+      case View360CallStatus.connected:
+        bg = const Color(0xFF064E3B);
+        border = const Color(0xFF059669);
+        textColor = const Color(0xFF34D399);
+        label = 'Connected';
+        leading = Container(
+          width: 7,
+          height: 7,
           decoration: const BoxDecoration(
-            color: Color(0xFF334155),
+            color: Color(0xFF34D399),
             shape: BoxShape.circle,
           ),
-          alignment: Alignment.center,
-          child: Text(
-            initial,
+        );
+        break;
+
+      case View360CallStatus.connecting:
+        bg = const Color(0xFF451A03);
+        border = const Color(0xFFD97706);
+        textColor = const Color(0xFFFBBF24);
+        label = 'Connecting';
+        leading = const SizedBox(
+          width: 9,
+          height: 9,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.8,
+            color: Color(0xFFFBBF24),
+          ),
+        );
+        break;
+
+      case View360CallStatus.reconnecting:
+        bg = const Color(0xFF451A03);
+        border = const Color(0xFFEA580C);
+        textColor = const Color(0xFFFB923C);
+        label = 'Reconnecting';
+        leading = const SizedBox(
+          width: 9,
+          height: 9,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.8,
+            color: Color(0xFFFB923C),
+          ),
+        );
+        break;
+
+      case View360CallStatus.disconnecting:
+        bg = const Color(0xFF1E293B);
+        border = const Color(0xFF475569);
+        textColor = const Color(0xFF94A3B8);
+        label = 'Disconnecting';
+        break;
+
+      case View360CallStatus.failed:
+        bg = const Color(0xFF450A0A);
+        border = const Color(0xFFDC2626);
+        textColor = const Color(0xFFF87171);
+        label = 'Connection Failed';
+        leading = const Icon(
+          Icons.error_outline_rounded,
+          size: 13,
+          color: Color(0xFFF87171),
+        );
+        break;
+
+      case View360CallStatus.disconnected:
+        bg = const Color(0xFF1E293B);
+        border = const Color(0xFF334155);
+        textColor = const Color(0xFF94A3B8);
+        label = 'Disconnected';
+        leading = Container(
+          width: 7,
+          height: 7,
+          decoration: const BoxDecoration(
+            color: Color(0xFF64748B),
+            shape: BoxShape.circle,
+          ),
+        );
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (leading != null) ...[
+            leading,
+            const SizedBox(width: 7),
+          ],
+          Text(
+            label,
             style: GoogleFonts.inter(
-              fontSize: 16,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: textColor,
             ),
           ),
-        ),
-        const SizedBox(width: 14),
-
-        // Name and Subtitle
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: GoogleFonts.inter(
-                  fontSize: (screenWidth * 0.038).clamp(14.0, 15.5),
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                role,
-                style: GoogleFonts.inter(
-                  fontSize: (screenWidth * 0.033).clamp(12.0, 13.0),
-                  fontWeight: FontWeight.w400,
-                  color: const Color(0xFF64748B),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Green Mic Icon
-        const Icon(
-          Icons.mic,
-          color: Color(0xFF16A34A),
-          size: 20,
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildControlButton({
+  String _getStatusDescription(View360CallStatus status) {
+    switch (status) {
+      case View360CallStatus.connected:
+        return 'Voice call active';
+      case View360CallStatus.connecting:
+        return 'Connecting to voice room...';
+      case View360CallStatus.reconnecting:
+        return 'Reconnecting voice stream...';
+      case View360CallStatus.disconnecting:
+        return 'Disconnecting from call...';
+      case View360CallStatus.failed:
+        return 'Call failed to establish';
+      case View360CallStatus.disconnected:
+        return 'Call ended';
+    }
+  }
+
+  Widget _buildVoiceControlButton({
     required double size,
-    required double iconSize,
-    required Color backgroundColor,
-    Color? borderColor,
     required IconData icon,
     required Color iconColor,
-    bool hasShadow = false,
+    required Color backgroundColor,
+    required Color borderColor,
+    required String label,
     required VoidCallback onTap,
+    bool hasGlow = false,
+    bool enabled = true,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(size / 2),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            shape: BoxShape.circle,
-            border: borderColor != null
-                ? Border.all(color: borderColor, width: 1)
-                : null,
-            boxShadow: hasShadow
-                ? [
-                    BoxShadow(
-                      color: backgroundColor.withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-          ),
-          child: Icon(
-            icon,
-            color: iconColor,
-            size: iconSize,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: enabled ? onTap : null,
+            borderRadius: BorderRadius.circular(size / 2),
+            child: Opacity(
+              opacity: enabled ? 1.0 : 0.45,
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor, width: 1.5),
+                  boxShadow: hasGlow
+                      ? [
+                          BoxShadow(
+                            color: backgroundColor.withValues(alpha: 0.45),
+                            blurRadius: 18,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                ),
+                child: Icon(
+                  icon,
+                  color: iconColor,
+                  size: size * 0.44,
+                ),
+              ),
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: enabled ? const Color(0xFFCBD5E1) : const Color(0xFF64748B),
+          ),
+        ),
+      ],
     );
   }
 }
