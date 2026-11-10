@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:view360_call/view360_call.dart';
@@ -68,24 +70,22 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
     final call = View360Call(
       config: View360CallConfig(
         serverUrl: serverUrl,
-        tokenProvider: ({
-          required String roomName,
-          required String participantName,
-        }) async {
-          return await tokenApiService.requestToken(
-            roomName: roomName,
-            participantName: participantName,
-          );
-        },
+        tokenProvider:
+            ({
+              required String roomName,
+              required String participantName,
+            }) async {
+              return await tokenApiService.requestToken(
+                roomName: roomName,
+                participantName: participantName,
+              );
+            },
       ),
     );
 
     try {
       // 5. Connect to room
-      await call.connect(
-        roomName: roomName,
-        participantName: participantName,
-      );
+      await call.connect(roomName: roomName, participantName: participantName);
 
       if (!mounted) {
         call.dispose();
@@ -353,16 +353,19 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
                             width: double.infinity,
                             height: buttonHeight,
                             child: ElevatedButton(
-                              onPressed:
-                                  _isConnecting ? null : _connectAndJoinRoom,
+                              onPressed: _isConnecting
+                                  ? null
+                                  : _connectAndJoinRoom,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF2563EB),
-                                disabledBackgroundColor:
-                                    const Color(0xFF93C5FD),
+                                disabledBackgroundColor: const Color(
+                                  0xFF93C5FD,
+                                ),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                shadowColor: const Color(0xFF2563EB)
-                                    .withValues(alpha: 0.3),
+                                shadowColor: const Color(
+                                  0xFF2563EB,
+                                ).withValues(alpha: 0.3),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -396,8 +399,10 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
                                   : Text(
                                       'Connect & Join Room',
                                       style: GoogleFonts.inter(
-                                        fontSize: (screenWidth * 0.042)
-                                            .clamp(15.0, 16.5),
+                                        fontSize: (screenWidth * 0.042).clamp(
+                                          15.0,
+                                          16.5,
+                                        ),
                                         fontWeight: FontWeight.w600,
                                         letterSpacing: -0.2,
                                       ),
@@ -498,10 +503,7 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (leading != null) ...[
-            leading,
-            const SizedBox(width: 6),
-          ],
+          if (leading != null) ...[leading, const SizedBox(width: 6)],
           Text(
             label,
             style: GoogleFonts.inter(
@@ -516,6 +518,7 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
   }
 
   Widget _buildErrorBanner(String message) {
+    log("Error Message: $message");
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -615,24 +618,15 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: Color(0xFFE2E8F0),
-                width: 1,
-              ),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: Color(0xFFE2E8F0),
-                width: 1,
-              ),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
             ),
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: Color(0xFFE2E8F0),
-                width: 1,
-              ),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -643,10 +637,7 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: Color(0xFFEF4444),
-                width: 1,
-              ),
+              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),

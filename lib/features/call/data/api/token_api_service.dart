@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'call_token_api_config.dart';
 import 'call_token_exception.dart';
@@ -13,20 +14,19 @@ class TokenApiService {
   final CallTokenApiConfig config;
   final Dio _dio;
 
-  TokenApiService({
-    this.config = const CallTokenApiConfig(),
-    Dio? dio,
-  }) : _dio = dio ??
-            Dio(
-              BaseOptions(
-                connectTimeout: config.connectTimeout,
-                receiveTimeout: config.receiveTimeout,
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-                },
-              ),
-            );
+  TokenApiService({this.config = const CallTokenApiConfig(), Dio? dio})
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: config.connectTimeout,
+              receiveTimeout: config.receiveTimeout,
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+            ),
+          );
 
   /// Requests a LiveKit JWT token from the Node.js backend.
   ///
@@ -51,12 +51,9 @@ class TokenApiService {
     try {
       final response = await _dio.post(
         endpoint,
-        data: {
-          'roomName': trimmedRoom,
-          'participantName': trimmedParticipant,
-        },
+        data: {'roomName': trimmedRoom, 'participantName': trimmedParticipant},
       );
-
+      log(response.toString());
       return _validateAndExtractToken(response);
     } on DioException catch (dioError) {
       throw _handleDioError(dioError, endpoint);
@@ -130,7 +127,10 @@ class TokenApiService {
   }
 
   /// Maps Dio HTTP exceptions to a user-friendly [CallTokenApiException].
-  CallTokenApiException _handleDioError(DioException dioError, String endpoint) {
+  CallTokenApiException _handleDioError(
+    DioException dioError,
+    String endpoint,
+  ) {
     final statusCode = dioError.response?.statusCode;
     final responseData = dioError.response?.data;
 
@@ -168,7 +168,9 @@ class TokenApiService {
         return const CallTokenApiException('Token request was cancelled.');
 
       case DioExceptionType.badCertificate:
-        return const CallTokenApiException('Invalid SSL certificate from token server.');
+        return const CallTokenApiException(
+          'Invalid SSL certificate from token server.',
+        );
 
       case DioExceptionType.unknown:
       default:
@@ -181,4 +183,3 @@ class TokenApiService {
     }
   }
 }
-
