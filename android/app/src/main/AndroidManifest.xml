@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
 
     <application
-        android:label="view360_direct_chat_example"
+        android:label="View360Sdk"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

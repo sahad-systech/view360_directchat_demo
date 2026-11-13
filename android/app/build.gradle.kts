@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.view360_direct_chat_example"
+    namespace = "com.view360.sdk"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.view360_direct_chat_example"
+        applicationId = "com.view360.sdk"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

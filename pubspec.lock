@@ -1133,20 +1133,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
-  view360_call:
-    dependency: "direct main"
-    description:
-      path: "../ call sdk setup/view360_call"
-      relative: true
-    source: path
-    version: "0.0.1"
   view360directchat:
     dependency: "direct main"
     description:
-      path: "../../view360directchat"
-      relative: true
-    source: path
-    version: "2.1.0"
+      name: view360directchat
+      sha256: f47327db546c55aa9aed143efd7ff6187c14d9b9440ac6ebe76728e7ebe5c955
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.0"
   vm_service:
     dependency: transitive
     description:

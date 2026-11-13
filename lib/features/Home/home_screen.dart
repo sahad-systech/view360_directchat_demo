@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:view360_direct_chat_example/features/Aivoice/voice_agent.dart';
 import 'package:view360_direct_chat_example/features/call/presentation/screen/voice_call_demo_screen.dart';
 import 'package:view360_direct_chat_example/features/chat/pre_chat_screen.dart';
+import 'package:view360directchat/view360directchat.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -79,7 +80,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 52),
 
                   // Action Buttons
-                  _GradientButton(
+                  _SolidButton(
                     title: 'AI Bot Chat',
                     subtitle: 'Try our AI assistant',
                     icon: Icons.smart_toy_rounded,
@@ -106,19 +107,30 @@ class HomeScreen extends StatelessWidget {
                       );
                     },
                   ),
+                  // const SizedBox(height: 16),
+                  // _SolidButton(
+                  //   title: 'App to app calling',
+                  //   subtitle: 'Call a user',
+                  //   icon: Icons.call_rounded,
+                  //   onTap: () {
+                  //     Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(
+                  //         builder: (context) => const VoiceCallDemoScreen(),
+                  //       ),
+                  //     );
+                  //   },
+                  // ),
                   const SizedBox(height: 16),
                   _SolidButton(
-                    title: 'App to app calling',
-                    subtitle: 'Call a user',
-                    icon: Icons.call_rounded,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const VoiceCallDemoScreen(),
-                        ),
-                      );
-                    },
+                    title: 'Direct Chat Screen',
+                    subtitle: 'Start chat without any pre chat form ',
+                    icon: Icons.chat,
+                    onTap: () => View360.openChat(
+                      context: context,
+                      userName: 'Sahad',
+                      userEmail: 'test@gmai.com',
+                    ),
                   ),
                   const SizedBox(height: 48),
 
@@ -144,83 +156,6 @@ class _HeroIllustration extends StatelessWidget {
       'assets/images/Group 1000005125.webp',
       fit: BoxFit.contain,
       height: 150,
-    );
-  }
-}
-
-class _GradientButton extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _GradientButton({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF8675EC), Color(0xFF6A5AE0)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF6A5AE0).withValues(alpha: 0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white),
-            const SizedBox(width: 8),
-          ],
-        ),
-      ),
     );
   }
 }
