@@ -11,6 +11,7 @@ class AppConstants {
   static const String livekitUrl = "wss://livekit.view360.cx";
 
   // LiveKit Calling SDK (App-to-App)
-  static const String defaultLiveKitUrl = 'ws://127.0.0.1:7880';
-  static const String defaultTokenServerUrl = 'http://127.0.0.1:3000';
+  static const String defaultLiveKitUrl = 'wss://51.170.91.54:7883';
+
+  static const String defaultTokenServerUrl = 'https://51.170.91.54';
 }

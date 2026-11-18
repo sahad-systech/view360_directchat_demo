@@ -107,20 +107,20 @@ class HomeScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  // const SizedBox(height: 16),
-                  // _SolidButton(
-                  //   title: 'App to app calling',
-                  //   subtitle: 'Call a user',
-                  //   icon: Icons.call_rounded,
-                  //   onTap: () {
-                  //     Navigator.push(
-                  //       context,
-                  //       MaterialPageRoute(
-                  //         builder: (context) => const VoiceCallDemoScreen(),
-                  //       ),
-                  //     );
-                  //   },
-                  // ),
+                  const SizedBox(height: 16),
+                  _SolidButton(
+                    title: 'App to app calling',
+                    subtitle: 'Call a user',
+                    icon: Icons.call_rounded,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VoiceCallDemoScreen(),
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 16),
                   _SolidButton(
                     title: 'Direct Chat Screen',
