@@ -6,7 +6,7 @@ import 'package:view360_call/view360_call.dart';
 /// Screen 2: Active Voice Call
 ///
 /// Clean, modern dark voice-only interface demonstrating live call lifecycle,
-/// reactive state synchronization, call timer, and mute/unmute control.
+/// reactive state synchronization, call timer, mute/unmute, and speaker control.
 class ActiveCallScreen extends StatefulWidget {
   final View360Call call;
   final String participantName;
@@ -29,11 +29,6 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
   Timer? _callTimer;
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
-
-  /// The view360_call SDK currently only implements connect, mute, unmute,
-  /// and disconnect. Audio speaker routing is not yet implemented in the SDK.
-  /// Per requirements: "Speaker button, but only if supported by the SDK".
-  static const bool _isSpeakerSupportedBySdk = false;
 
   @override
   void initState() {
@@ -135,6 +130,38 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
     }
   }
 
+  Future<void> _toggleSpeaker() async {
+    final isSpeakerOn = widget.call.controller.state.isSpeakerOn;
+    try {
+      await widget.call.setSpeakerOn(!isSpeakerOn);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.call.controller.state.isSpeakerOn
+                ? 'Speaker turned on'
+                : 'Speaker turned off',
+            style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+          ),
+          duration: const Duration(milliseconds: 900),
+          backgroundColor: const Color(0xFF1E293B),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to change speaker state: $e',
+            style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    }
+  }
+
   Future<void> _endCall() async {
     _callTimer?.cancel();
     try {
@@ -161,6 +188,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
     final double titleFontSize = (screenWidth * 0.062).clamp(22.0, 26.0);
     final double timerFontSize = (screenWidth * 0.11).clamp(36.0, 48.0);
     final double controlButtonSize = (screenWidth * 0.18).clamp(62.0, 74.0);
+    final double controlButtonSpacing = (screenWidth * 0.05).clamp(16.0, 24.0);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B0F19), // Deep dark theme background
@@ -396,7 +424,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                       const Spacer(),
                       SizedBox(height: (screenHeight * 0.04).clamp(24.0, 40.0)),
 
-                      // Bottom Call Controls (Mute/Unmute, End Call)
+                      // Bottom Call Controls (Mute/Unmute, Speaker, End Call)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -421,21 +449,29 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                             onTap: _toggleMute,
                           ),
 
-                          // 2. Speaker Button (Rendered ONLY if supported by the SDK)
-                          if (_isSpeakerSupportedBySdk) ...[
-                            const SizedBox(width: 28),
-                            _buildVoiceControlButton(
-                              size: controlButtonSize,
-                              icon: Icons.volume_up_rounded,
-                              iconColor: Colors.white,
-                              backgroundColor: const Color(0xFF1E293B),
-                              borderColor: const Color(0xFF334155),
-                              label: 'Speaker',
-                              onTap: () {},
-                            ),
-                          ],
+                          SizedBox(width: controlButtonSpacing),
 
-                          const SizedBox(width: 28),
+                          // 2. Speaker Button
+                          _buildVoiceControlButton(
+                            size: controlButtonSize,
+                            icon: callState.isSpeakerOn
+                                ? Icons.volume_up_rounded
+                                : Icons.volume_down_rounded,
+                            iconColor: Colors.white,
+                            backgroundColor: callState.isSpeakerOn
+                                ? const Color(0xFF2563EB)
+                                : const Color(0xFF1E293B),
+                            borderColor: callState.isSpeakerOn
+                                ? const Color(0xFF3B82F6)
+                                : const Color(0xFF334155),
+                            hasGlow: callState.isSpeakerOn,
+                            label: 'Speaker',
+                            enabled:
+                                callState.status == View360CallStatus.connected,
+                            onTap: _toggleSpeaker,
+                          ),
+
+                          SizedBox(width: controlButtonSpacing),
 
                           // 3. End Call Button
                           _buildVoiceControlButton(
