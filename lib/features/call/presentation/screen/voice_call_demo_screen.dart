@@ -36,6 +36,8 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
   }
 
   Future<void> _connectAndJoinRoom() async {
+    final fcmToken = await View360FCMService.getDeviceToken();
+    log('Token: $fcmToken');
     // 1. Validate all required fields
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
@@ -72,7 +74,13 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
             },
       ),
     );
-
+    call.onIncomingCall = (IncomingCallEvent event) {
+      log('Call ID: ${event.callId}');
+      log('Caller: ${event.callerId}');
+      log('Room: ${event.roomName}');
+      log('Timestamp: ${event.timestamp}');
+    };
+    await call.initialize();
     try {
       // 5. Connect to room
       await call.connect(roomName: roomName, participantName: participantName);

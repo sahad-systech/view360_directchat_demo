@@ -1,8 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:view360_call/view360_call.dart';
 import 'package:view360_direct_chat_example/firebase_options.dart';
-import 'package:view360_direct_chat_example/services/fcm_service.dart';
 import 'package:view360directchat/view360directchat.dart';
 import 'package:view360_direct_chat_example/features/Home/home_screen.dart';
 import 'package:view360_direct_chat_example/features/chat/presentation/providers/chat_provider.dart';
@@ -14,6 +15,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await FCMService().initialize();
+
   final prefs = await SharedPreferences.getInstance();
   final hasActiveChatSession = prefs.getBool('hasActiveChatSession') ?? false;
   await View360.init(
@@ -22,6 +24,7 @@ void main() async {
       appId: AppConstants.chatAppId,
     ),
   );
+  FirebaseMessaging.onBackgroundMessage(View360Call.backgroundMessageHandler);
 
   runApp(
     MultiProvider(
