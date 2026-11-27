@@ -38,6 +38,14 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
   Future<void> _connectAndJoinRoom() async {
     final fcmToken = await View360FCMService.getDeviceToken();
     log('Token: $fcmToken');
+    if (fcmToken != null) {
+      await View360FCMService.sendTokenToServer(
+        fcmToken: fcmToken,
+        userId: _participantNameController.text,
+        baseUrl: AppConstants.defaultTokenServerUrl,
+      );
+    }
+
     // 1. Validate all required fields
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;

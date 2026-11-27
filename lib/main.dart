@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +12,16 @@ import 'package:view360_direct_chat_example/features/chat/presentation/providers
 import 'package:view360_direct_chat_example/core/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:view360_direct_chat_example/features/chat/chat_screen.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  log('FCM background message received:');
+  log(' - messageId: ${message.messageId}');
+  log(' - data: ${message.data}');
+  log(' - notification: title="${message.notification?.title}", body="${message.notification?.body}"');
+  await View360Call.backgroundMessageHandler(message);
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +36,7 @@ void main() async {
       appId: AppConstants.chatAppId,
     ),
   );
-  FirebaseMessaging.onBackgroundMessage(View360Call.backgroundMessageHandler);
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(
     MultiProvider(
